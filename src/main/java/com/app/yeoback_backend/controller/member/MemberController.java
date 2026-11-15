@@ -1,6 +1,5 @@
 package com.app.yeoback_backend.controller.member;
 
-import com.app.yeoback_backend.auth.JwtTokenProvider;
 import com.app.yeoback_backend.service.MemberService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

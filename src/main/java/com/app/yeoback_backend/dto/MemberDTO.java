@@ -27,8 +27,6 @@ public class MemberDTO implements Serializable {
     private Status memberStatus;
 
     // 프로필사진
-
-
     public MemberVO toMemberVO() {
         return MemberVO.builder()
                 .id(id)

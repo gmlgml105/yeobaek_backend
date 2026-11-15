@@ -12,7 +12,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MemberDAO {
     private final MemberMapper memberMapper;
-
     // 회원가입
     public void save(MemberDTO memberDTO) {
         memberMapper.insert(memberDTO);

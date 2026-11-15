@@ -1,7 +1,6 @@
 package com.app.yeoback_backend.controller.member;
 
 import com.app.yeoback_backend.aop.annotation.LogStatus;
-import com.app.yeoback_backend.auth.JwtTokenProvider;
 import com.app.yeoback_backend.dto.MemberDTO;
 import com.app.yeoback_backend.service.MemberService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
