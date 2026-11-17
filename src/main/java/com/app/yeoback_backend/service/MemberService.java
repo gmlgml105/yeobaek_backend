@@ -38,8 +38,8 @@ public class MemberService {
         boolean byEmail = memberDTO.getMemberEmail() != null && !memberDTO.getMemberEmail().isBlank();
         ContactMethod method = byEmail ? ContactMethod.EMAIL : ContactMethod.PHONE;
         String contact = method.normalize(byEmail ? memberDTO.getMemberEmail() : memberDTO.getMemberPhone());
-        if (contact == null || contact.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "이메일 또는 휴대폰 번호를 입력해 주세요.");
+        if (!method.isValid(contact)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", method == ContactMethod.EMAIL ? "이메일 형식이 올바르지 않아요." : "휴대폰 번호 형식이 올바르지 않아요.");
         }
         if (memberDTO.getMemberPassword() == null || memberDTO.getMemberPassword().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "비밀번호를 입력해 주세요.");

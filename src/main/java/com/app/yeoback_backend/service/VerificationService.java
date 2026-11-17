@@ -69,6 +69,8 @@ public class VerificationService {
             codeSendService.send(method, contact, purpose, next.code, CODE_TTL_MS / 60000);
         } catch (IllegalStateException e) {
             if (!exposeCode) {
+                // 실패 원인(SMTP 인증 실패, 발신번호 미등록 등)을 로그로 남겨 추적할 수 있게 한다
+                log.error("인증코드 발송 실패 ({}): {}", method.getValue(), e.getMessage(), e);
                 throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "send_failed",
                         "인증코드를 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
             }
