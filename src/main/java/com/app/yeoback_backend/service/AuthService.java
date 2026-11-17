@@ -63,8 +63,8 @@ public class AuthService {
         CodePurpose purpose = required(request.getPurpose(), "purpose");
         ContactMethod method = required(request.getMethod(), "method");
         String contact = method.normalize(request.getContact());
-        if (contact == null || contact.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "이메일 또는 휴대폰 번호를 입력해 주세요.");
+        if (!method.isValid(contact)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", method == ContactMethod.EMAIL ? "이메일 형식이 올바르지 않아요." : "휴대폰 번호 형식이 올바르지 않아요.");
         }
 
         boolean exists = memberService.exists(contact);

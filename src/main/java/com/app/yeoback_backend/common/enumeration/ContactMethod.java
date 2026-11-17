@@ -31,6 +31,18 @@ public enum ContactMethod {
         return this == EMAIL ? contact.trim().toLowerCase() : contact.replaceAll("\\D", "");
     }
 
+    /**
+     * 정규화된 값이 이 수단의 형식에 맞는지 (프론트 validation.ts 와 같은 규칙)
+     *  - 이메일: name@domain.tld
+     *  - 휴대폰: 010/011/016/017/018/019 + 7~8자리
+     */
+    public boolean isValid(String normalized) {
+        if (normalized == null || normalized.isBlank()) return false;
+        return this == EMAIL
+                ? normalized.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$")
+                : normalized.matches("^01[016789]\\d{7,8}$");
+    }
+
     /** 로그인 아이디(이메일 또는 휴대폰)를 보고 수단을 고른다 */
     public static ContactMethod guess(String loginId) {
         return loginId != null && loginId.contains("@") ? EMAIL : PHONE;
