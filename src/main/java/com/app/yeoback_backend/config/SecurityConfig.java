@@ -52,6 +52,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/logout",
                                 "/api/auth/refresh",
+                                // 프로필 사진 등 저장된 이미지 (다른 회원도 봄)
+                                "/api/files/**",
                                 "/api/auth/code/**",
                                 "/api/auth/password/**",
                                 "/api/member/**",

@@ -69,16 +69,16 @@ create table tbl_destination (
                                      references tbl_destination(id)
 );
 
--- 여행 취향
+-- 여행 취향 (화면: 프로필 > 여행 취향 · 기초 데이터는 이 파일 맨 아래)
 create table tbl_preference (
                                 id bigint generated always as identity primary key,
-                                preference_name varchar(30) not null
+                                preference_name varchar(30) not null unique
 );
 
--- 선호 활동
+-- 선호 활동 (화면: 프로필 > 여행 키워드 · 기초 데이터는 이 파일 맨 아래)
 create table tbl_vibe (
                           id bigint generated always as identity primary key,
-                          vide_name varchar(30) not null
+                          vibe_name varchar(30) not null unique
 );
 
 
@@ -112,20 +112,38 @@ create table tbl_auth (
 -- 회원 개인 설정
 create table tbl_member_setting (
                                     id bigint not null primary key,
-                                    preference_id bigint not null,
-                                    vibe_id bigint not null,
-                                    thema_color varchar(30) default '',
-                                    alias_public boolean default false,
+                                    thema_color varchar(30) default 'sky',      -- 팔레트 id(sky·aqua·blossom·lavender·mint) 또는 직접 고른 #rrggbb
+                                    alias_public boolean default true,
                                     phone_public boolean default false,
-                                    note_auto_save boolean default false,
+                                    note_auto_save boolean default true,
                                     created_datetime timestamp default now(),
                                     updated_datetime timestamp default now(),
                                     constraint fk_setting_member foreign key (id)
-                                        references tbl_member(id) on delete cascade,
-                                    constraint fk_setting_preference foreign key (preference_id)
-                                        references tbl_preference(id),
-                                    constraint fk_setting_vibe foreign key (vibe_id)
-                                        references tbl_vibe(id)
+                                        references tbl_member(id) on delete cascade
+);
+
+-- 회원이 고른 여행 취향 (여러 개)
+create table tbl_member_preference (
+                                       member_id bigint not null,
+                                       preference_id bigint not null,
+                                       created_datetime timestamp default now(),
+                                       primary key (member_id, preference_id),
+                                       constraint fk_member_preference_member foreign key (member_id)
+                                           references tbl_member(id) on delete cascade,
+                                       constraint fk_member_preference_preference foreign key (preference_id)
+                                           references tbl_preference(id)
+);
+
+-- 회원이 고른 여행 키워드 (여러 개)
+create table tbl_member_vibe (
+                                 member_id bigint not null,
+                                 vibe_id bigint not null,
+                                 created_datetime timestamp default now(),
+                                 primary key (member_id, vibe_id),
+                                 constraint fk_member_vibe_member foreign key (member_id)
+                                     references tbl_member(id) on delete cascade,
+                                 constraint fk_member_vibe_vibe foreign key (vibe_id)
+                                     references tbl_vibe(id)
 );
 
 -- 친구 신청 목록
@@ -371,3 +389,17 @@ create table tbl_file_note (
                                constraint fk_file_note foreign key (note_id)
                                    references tbl_trip_note(id)
 );
+
+--------------------------------------------------
+-- 8. 기초 데이터 (프론트 worldStore 의 TASTE_OPTIONS · KEYWORD_OPTIONS 와 같은 순서)
+--------------------------------------------------
+
+-- 여행 취향
+insert into tbl_preference (preference_name) values
+    ('힐링'), ('풍경'), ('식도락'), ('디저트'), ('물멍'), ('로컬'), ('카페'), ('쇼핑'), ('휴양'), ('캠핑'), ('축제'), ('가성비'),
+    ('어드벤처'), ('팝업'), ('공연'), ('호캉스'), ('자연'), ('사진'), ('기념품'), ('숙소'), ('가족'), ('커플'), ('친구'), ('나홀로');
+
+-- 여행 키워드
+insert into tbl_vibe (vibe_name) values
+    ('평온한'), ('계획적인'), ('평화로운'), ('활발한'), ('여유로운'), ('재밌는'), ('무계획의'), ('회복되는'), ('조용한'),
+    ('나즈막한'), ('체계적인'), ('가벼운'), ('로컬적인'), ('활기찬'), ('체험하는');

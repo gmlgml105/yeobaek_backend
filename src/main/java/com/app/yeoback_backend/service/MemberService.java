@@ -23,6 +23,7 @@ public class MemberService {
     private final MemberDAO memberDAO;
     private final PasswordEncoder passwordEncoder;
     private final VerificationService verificationService;
+    private final MemberDefaultsService memberDefaultsService;
 
     /**
      * 회원가입
@@ -55,10 +56,13 @@ public class MemberService {
         }
 
         memberDTO.setMemberPassword(passwordEncoder.encode(memberDTO.getMemberPassword()));
+        memberDTO.setMemberAlias(memberDefaultsService.newNickname());
         memberDAO.save(memberDTO);
 
         memberDTO.setMemberRole(MemberRole.MEMBER);
         memberDAO.saveRole(memberDTO);
+        // 기본 설정 행 (공개 설정 · 컬러 등)
+        memberDefaultsService.createDefaultSetting(memberDTO.getId());
 
         verificationService.consume(CodePurpose.SIGNUP, contact);
     }

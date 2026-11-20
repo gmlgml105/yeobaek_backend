@@ -19,7 +19,7 @@ import java.util.Optional;
  * 소셜 로그인(카카오 · 네이버 · 구글) 회원 처리
  *  1. 이미 연동된 소셜 계정(provider + providerId) → 그 회원으로 로그인
  *  2. 같은 이메일의 기존 회원 → 소셜 계정을 연동하고 로그인
- *  3. 처음 온 사람 → 소셜 정보(이름 · 이메일)로 바로 가입하고 로그인 (비밀번호 없음)
+ *  3. 처음 온 사람 → 소셜 정보(이름 · 이메일)로 바로 가입하고 로그인 (비밀번호 없음, 자동 닉네임 · 기본 설정)
  * 반환값은 JWT 의 subject 로 쓰는 로그인 아이디(이메일, 없으면 휴대폰)
  */
 @Service
@@ -31,6 +31,7 @@ public class OAuthLoginService {
 
     private final MemberDAO memberDAO;
     private final OAuthDAO oAuthDAO;
+    private final MemberDefaultsService memberDefaultsService;
 
     /** 소셜 로그인을 진행할 수 없을 때. reason 은 프론트 로그인 화면이 안내 문구를 고르는 데 쓴다 */
     @Getter
@@ -78,10 +79,12 @@ public class OAuthLoginService {
         MemberDTO member = new MemberDTO();
         member.setMemberEmail(normalizedEmail);
         member.setMemberName(trimName(name));
+        member.setMemberAlias(memberDefaultsService.newNickname());
         memberDAO.save(member);
 
         member.setMemberRole(MemberRole.MEMBER);
         memberDAO.saveRole(member);
+        memberDefaultsService.createDefaultSetting(member.getId());
 
         link(member.getId(), provider, providerId, profileUrl);
         log.info("oauth member joined: id={}, provider={}", member.getId(), provider.getValue());

@@ -32,6 +32,14 @@ public class MemberDAO {
     public boolean existsByLoginId(String loginId) {
         return memberMapper.countByLoginId(loginId) > 0;
     }
+    // 닉네임이 이미 쓰이는지
+    public boolean existsByAlias(String alias) {
+        return memberMapper.countByAlias(alias) > 0;
+    }
+    // 프로필 수정 (닉네임 · 소개)
+    public void updateProfile(Long id, String alias, String bio) {
+        memberMapper.updateProfile(id, alias, bio);
+    }
     // 비밀번호 변경
     public void updatePassword(Long id, String encodedPassword) {
         memberMapper.updatePassword(id, encodedPassword);
