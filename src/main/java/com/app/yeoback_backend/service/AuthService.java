@@ -13,6 +13,7 @@ import com.app.yeoback_backend.dto.auth.LoginResponseDTO;
 import com.app.yeoback_backend.dto.auth.PasswordResetRequestDTO;
 import com.app.yeoback_backend.dto.auth.SentCodeDTO;
 import com.app.yeoback_backend.dto.auth.VerifyResultDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -51,6 +52,25 @@ public class AuthService {
 
         MemberDTO member = memberService.getMember(user.getLoginId());
         log.info("login success: id={}", member.getId());
+        return new LoginResponseDTO(accessToken, member);
+    }
+
+    /**
+     * 리프레시 토큰 쿠키로 새 액세스 토큰과 회원 정보를 받는다
+     *  - 소셜 로그인 콜백 화면이 토큰을 localStorage 에 담을 때 사용
+     *  - 리프레시 토큰도 새로 발급해 유지 시간을 다시 시작한다
+     */
+    public LoginResponseDTO refresh(HttpServletRequest request) {
+        String refreshToken = jwtTokenProvider.parseRefreshTokenFromCookie(request);
+        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "no_session", "로그인이 필요해요.");
+        }
+        String loginId = jwtTokenProvider.getUsername(refreshToken);
+        MemberDTO member = memberService.findActiveMember(loginId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "no_session", "로그인이 필요해요."));
+
+        String accessToken = jwtTokenProvider.createAccessToken(loginId);
+        jwtTokenProvider.createRefreshToken(loginId);
         return new LoginResponseDTO(accessToken, member);
     }
 

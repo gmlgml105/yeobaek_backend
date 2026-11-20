@@ -10,6 +10,7 @@ import com.app.yeoback_backend.dto.auth.SentCodeDTO;
 import com.app.yeoback_backend.dto.auth.VerifyResultDTO;
 import com.app.yeoback_backend.service.AuthService;
 import com.app.yeoback_backend.service.MemberService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import java.util.Map;
 /**
  * 인증 API (/api/auth)
  *  POST /login            로그인 → { accessToken, member }
+ *  POST /refresh          리프레시 토큰 쿠키 → { accessToken, member } (소셜 로그인 콜백 등)
  *  POST /logout           토큰 쿠키 삭제
  *  GET  /me               현재 로그인 회원 (Authorization: Bearer 필요)
  *  POST /code/send        인증코드 발송 (signup · reset)
@@ -42,6 +44,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponseDTO> refresh(HttpServletRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")

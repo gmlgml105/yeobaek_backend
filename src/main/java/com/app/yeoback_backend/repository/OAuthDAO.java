@@ -18,6 +18,10 @@ public class OAuthDAO {
     public void save(OAuthVO oAuthVO){
         oAuthMapper.insert(oAuthVO);
     }
+    //    공급자 + 공급자 고유 id 로 조회
+    public Optional<MemberDTO> findMemberByProviderId(OAuthProvider provider, String providerId){
+        return oAuthMapper.selectMemberByProviderId(provider, providerId);
+    }
     //    이메일로 조회
     public Optional<MemberDTO> findMemberByMemberLoginId(String loginId, OAuthProvider provider){
         return oAuthMapper.selectMemberByLoginId(loginId, provider);
