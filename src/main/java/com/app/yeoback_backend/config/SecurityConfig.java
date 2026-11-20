@@ -3,6 +3,7 @@ package com.app.yeoback_backend.config;
 import com.app.yeoback_backend.auth.AuthenticationFilter;
 import com.app.yeoback_backend.auth.AuthenticationHandler;
 import com.app.yeoback_backend.auth.AuthorizationHandler;
+import com.app.yeoback_backend.auth.OAuth2FailureHandler;
 import com.app.yeoback_backend.auth.OAuth2SuccessHandler;
 import com.app.yeoback_backend.common.enumeration.MemberRole;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class SecurityConfig {
     private final AuthenticationFilter authenticationFilter;
     private final OAuth2UserService oAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
 
     @Bean
@@ -49,6 +51,9 @@ public class SecurityConfig {
 //                                필터 체인(인증)을 제외할 경로
                                 "/api/auth/login",
                                 "/api/auth/logout",
+                                "/api/auth/refresh",
+                                // 프로필 사진 등 저장된 이미지 (다른 회원도 봄)
+                                "/api/files/**",
                                 "/api/auth/code/**",
                                 "/api/auth/password/**",
                                 "/api/member/**",
@@ -73,6 +78,7 @@ public class SecurityConfig {
                         oauth -> oauth.userInfoEndpoint(
                                 userInfo -> userInfo.userService(oAuth2UserService))
                                 .successHandler(oAuth2SuccessHandler)
+                                .failureHandler(oAuth2FailureHandler)
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
 

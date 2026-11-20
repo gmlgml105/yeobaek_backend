@@ -23,6 +23,7 @@ public class MemberService {
     private final MemberDAO memberDAO;
     private final PasswordEncoder passwordEncoder;
     private final VerificationService verificationService;
+    private final MemberDefaultsService memberDefaultsService;
 
     /**
      * 회원가입
@@ -38,8 +39,8 @@ public class MemberService {
         boolean byEmail = memberDTO.getMemberEmail() != null && !memberDTO.getMemberEmail().isBlank();
         ContactMethod method = byEmail ? ContactMethod.EMAIL : ContactMethod.PHONE;
         String contact = method.normalize(byEmail ? memberDTO.getMemberEmail() : memberDTO.getMemberPhone());
-        if (contact == null || contact.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "이메일 또는 휴대폰 번호를 입력해 주세요.");
+        if (!method.isValid(contact)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", method == ContactMethod.EMAIL ? "이메일 형식이 올바르지 않아요." : "휴대폰 번호 형식이 올바르지 않아요.");
         }
         if (memberDTO.getMemberPassword() == null || memberDTO.getMemberPassword().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "비밀번호를 입력해 주세요.");
@@ -55,10 +56,13 @@ public class MemberService {
         }
 
         memberDTO.setMemberPassword(passwordEncoder.encode(memberDTO.getMemberPassword()));
+        memberDTO.setMemberAlias(memberDefaultsService.newNickname());
         memberDAO.save(memberDTO);
 
         memberDTO.setMemberRole(MemberRole.MEMBER);
         memberDAO.saveRole(memberDTO);
+        // 기본 설정 행 (공개 설정 · 컬러 등)
+        memberDefaultsService.createDefaultSetting(memberDTO.getId());
 
         verificationService.consume(CodePurpose.SIGNUP, contact);
     }
@@ -76,6 +80,11 @@ public class MemberService {
     @LogStatusWithReturn
     public MemberDTO getMember(String loginId){
         return memberDAO.findMemberByLoginId(loginId).orElseThrow(MemberNotFoundException::new);
+    }
+
+    //    활동 중인 회원 조회 (없으면 empty)
+    public java.util.Optional<MemberDTO> findActiveMember(String loginId) {
+        return memberDAO.findMemberByLoginId(loginId);
     }
 
     //    가입 여부 (상태 무관)

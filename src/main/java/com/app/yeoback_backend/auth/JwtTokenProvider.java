@@ -28,6 +28,11 @@ public class JwtTokenProvider {
     private final UserDetailsService userDetailsService;
     @Value("${jwt.secret}")
     private String secretKey;
+    // 로그인 유지 시간 (초). application.yaml 의 jwt.* 로 바꾼다
+    @Value("${jwt.access-token-validity-seconds:3600}")
+    private long accessTokenValiditySeconds;
+    @Value("${jwt.refresh-token-validity-seconds:1209600}")
+    private long refreshTokenValiditySeconds;
     private Key key;
     private final HttpServletResponse response;
 
@@ -42,7 +47,7 @@ public class JwtTokenProvider {
 
     //    액세스 토큰 생성
     public String createAccessToken(String username) {
-        final long ACCESS_TOKEN_VALIDITY = 1000L * 60 * 60;
+        final long ACCESS_TOKEN_VALIDITY = accessTokenValiditySeconds * 1000L;
         String accessToken = Jwts.builder()
                 .setSubject(username)
                 .claim("memberEmail", username)
@@ -51,13 +56,13 @@ public class JwtTokenProvider {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
-        addTokenCookie(ACCESS_TOKEN_COOKIE, accessToken, 60 * 60 * 24);
+        addTokenCookie(ACCESS_TOKEN_COOKIE, accessToken, (int) accessTokenValiditySeconds);
 
         return accessToken;
     }
 
     public String createAccessToken(String username, String provider) {
-        final long ACCESS_TOKEN_VALIDITY = 1000L * 60 * 60;
+        final long ACCESS_TOKEN_VALIDITY = accessTokenValiditySeconds * 1000L;
         String accessToken = Jwts.builder()
                 .setSubject(username)
                 .claim("memberEmail", username)
@@ -67,7 +72,7 @@ public class JwtTokenProvider {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
-        addTokenCookie(ACCESS_TOKEN_COOKIE, accessToken, 60 * 60 * 24);
+        addTokenCookie(ACCESS_TOKEN_COOKIE, accessToken, (int) accessTokenValiditySeconds);
 
         return accessToken;
     }
@@ -106,7 +111,7 @@ public class JwtTokenProvider {
 
     //    리프레시 토큰 생성 (서버 저장 없이 쿠키로만 전달)
     public String createRefreshToken(String username){
-        final long REFRESH_TOKEN_VALIDITY = 1000L * 60 * 60 * 24 * 1;
+        final long REFRESH_TOKEN_VALIDITY = refreshTokenValiditySeconds * 1000L;
         String refreshToken = Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
@@ -114,13 +119,13 @@ public class JwtTokenProvider {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
-        addTokenCookie(REFRESH_TOKEN_COOKIE, refreshToken, 60 * 60 * 24);
+        addTokenCookie(REFRESH_TOKEN_COOKIE, refreshToken, (int) refreshTokenValiditySeconds);
 
         return refreshToken;
     }
 
     public String createRefreshToken(String username, String provider){
-        final long REFRESH_TOKEN_VALIDITY = 1000L * 60 * 60 * 24 * 1;
+        final long REFRESH_TOKEN_VALIDITY = refreshTokenValiditySeconds * 1000L;
         String refreshToken = Jwts.builder()
                 .setSubject(username)
                 .claim("provider", provider)
@@ -129,7 +134,7 @@ public class JwtTokenProvider {
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
-        addTokenCookie(REFRESH_TOKEN_COOKIE, refreshToken, 60 * 60 * 24);
+        addTokenCookie(REFRESH_TOKEN_COOKIE, refreshToken, (int) refreshTokenValiditySeconds);
 
         return refreshToken;
     }
@@ -165,6 +170,8 @@ public class JwtTokenProvider {
 
     private void addTokenCookie(String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
+        // 프론트는 localStorage 의 토큰을 쓰므로 쿠키는 JS 에서 읽을 필요가 없다 (XSS 로 탈취 방지)
+        cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge(maxAge);
         response.addCookie(cookie);

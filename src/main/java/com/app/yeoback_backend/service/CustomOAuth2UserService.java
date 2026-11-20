@@ -2,10 +2,6 @@ package com.app.yeoback_backend.service;
 
 import com.app.yeoback_backend.auth.OAuth2Attribute;
 import com.app.yeoback_backend.common.enumeration.MemberRole;
-import com.app.yeoback_backend.common.enumeration.OAuthProvider;
-import com.app.yeoback_backend.dto.MemberDTO;
-import com.app.yeoback_backend.repository.OAuthDAO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -18,50 +14,29 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
+/**
+ * 공급자(카카오 · 네이버 · 구글)에서 받은 사용자 정보를 공통 형태(id, provider, email, name, profile)로 바꾼다.
+ * 회원 조회 · 연동 · 가입은 로그인 성공 후 OAuth2SuccessHandler → OAuthLoginService 가 한다.
+ * 여기서 붙이는 권한은 이 요청 안에서만 쓰이고, 이후 요청의 권한은 JWT 로 DB 에서 다시 읽는다.
+ */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
-    private final OAuthDAO oAuthDAO;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService = new DefaultOAuth2UserService();
-        OAuth2User oAuth2User = oAuth2UserService.loadUser(userRequest);
+        OAuth2User oAuth2User = new DefaultOAuth2UserService().loadUser(userRequest);
         String provider = userRequest.getClientRegistration().getRegistrationId();
-        String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
+        String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails()
+                .getUserInfoEndpoint().getUserNameAttributeName();
+        log.info("oauth user loaded: provider={}", provider);
 
-        log.info("registration id: {}", provider);
-        log.info("user name attribute name: {}", userNameAttributeName);
-        log.info("OAuth2.0: {}", oAuth2User.getAttributes());
-
-        OAuth2Attribute oAuth2Attribute = OAuth2Attribute.of(provider, userNameAttributeName, oAuth2User.getAttributes());
-        Map<String, Object> oAuth2AttributeMap = oAuth2Attribute.convertToMap();
-
-        String loginId = "";
-        if (oAuth2Attribute.getEmail() != null && !
-                oAuth2Attribute.getEmail().isBlank()) {
-            loginId = oAuth2Attribute.getEmail();
-        } else if (oAuth2Attribute.getPhone() != null && !
-                oAuth2Attribute.getPhone().isBlank()) {
-            loginId = oAuth2Attribute.getPhone();
-        }
-
-        Optional<MemberDTO> foundMember = Optional.empty();
-
-        if (!loginId.isBlank()) {
-            foundMember = oAuthDAO.findMemberByMemberLoginId(
-                    loginId,
-                    OAuthProvider.getOAuthProvider(provider)
-            );
-        }
-
-        oAuth2AttributeMap.put("exist", foundMember.isPresent());
+        Map<String, Object> attributes = OAuth2Attribute.of(provider, userNameAttributeName, oAuth2User.getAttributes())
+                .convertToMap();
 
         return new DefaultOAuth2User(
-                Collections.singleton(new SimpleGrantedAuthority("ROLE_" + (foundMember.isEmpty() ? MemberRole.MEMBER.name() : foundMember.get().getMemberRole().name()))),
-                oAuth2AttributeMap, "id");
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_" + MemberRole.MEMBER.name())),
+                attributes, "id");
     }
 }

@@ -18,6 +18,10 @@ public interface MemberMapper {
     Optional<MemberDTO> selectMemberByLoginId(String loginId);
     // 이메일 혹은 핸드폰 가입 여부
     int countByLoginId(String loginId);
+    // 닉네임 사용 수
+    int countByAlias(String alias);
+    // 프로필 수정 (닉네임 · 소개)
+    void updateProfile(@Param("id") Long id, @Param("alias") String alias, @Param("bio") String bio);
     // 비밀번호 변경
     void updatePassword(@Param("id") Long id, @Param("memberPassword") String memberPassword);
 }
