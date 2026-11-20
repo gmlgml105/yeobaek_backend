@@ -78,6 +78,11 @@ public class MemberService {
         return memberDAO.findMemberByLoginId(loginId).orElseThrow(MemberNotFoundException::new);
     }
 
+    //    활동 중인 회원 조회 (없으면 empty)
+    public java.util.Optional<MemberDTO> findActiveMember(String loginId) {
+        return memberDAO.findMemberByLoginId(loginId);
+    }
+
     //    가입 여부 (상태 무관)
     public boolean exists(String loginId) {
         return memberDAO.existsByLoginId(loginId);
