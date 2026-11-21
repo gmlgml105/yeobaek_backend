@@ -5,9 +5,7 @@ import com.app.yeoback_backend.common.exception.MemberNotFoundException;
 import com.app.yeoback_backend.dto.FileDTO;
 import com.app.yeoback_backend.dto.MemberDTO;
 import com.app.yeoback_backend.dto.MemberSettingDTO;
-import com.app.yeoback_backend.dto.profile.ProfileResponseDTO;
-import com.app.yeoback_backend.dto.profile.ProfileUpdateRequestDTO;
-import com.app.yeoback_backend.dto.profile.SettingUpdateRequestDTO;
+import com.app.yeoback_backend.dto.ProfileDTO;
 import com.app.yeoback_backend.mapper.FileMapper;
 import com.app.yeoback_backend.mapper.MemberSettingMapper;
 import com.app.yeoback_backend.repository.MemberDAO;
@@ -48,7 +46,7 @@ public class ProfileService {
     private final MemberDefaultsService memberDefaultsService;
 
     @Transactional
-    public ProfileResponseDTO getProfile(Long memberId) {
+    public ProfileDTO getProfile(Long memberId) {
         MemberDTO member = member(memberId);
 
         // 이 기능 이전에 가입한 회원 보정
@@ -63,25 +61,26 @@ public class ProfileService {
 
         String avatarUrl = fileMapper.selectMemberFile(memberId).map(f -> "/api/files/" + f.getId()).orElse(null);
 
-        return new ProfileResponseDTO(
-                member.getId(),
-                member.getMemberName(),
-                member.getMemberEmail(),
-                member.getMemberPhone(),
-                member.getMemberAlias(),
-                member.getMemberBio(),
-                avatarUrl,
-                settingMapper.selectPreferenceNames(memberId),
-                settingMapper.selectVibeNames(memberId),
-                Boolean.TRUE.equals(setting.getAliasPublic()),
-                Boolean.TRUE.equals(setting.getPhonePublic()),
-                Boolean.TRUE.equals(setting.getNoteAutoSave()),
-                setting.getThemaColor());
+        ProfileDTO profile = new ProfileDTO();
+        profile.setId(member.getId());
+        profile.setName(member.getMemberName());
+        profile.setEmail(member.getMemberEmail());
+        profile.setPhone(member.getMemberPhone());
+        profile.setAvatarUrl(avatarUrl);
+        profile.setAlias(member.getMemberAlias());
+        profile.setBio(member.getMemberBio());
+        profile.setPreferences(settingMapper.selectPreferenceNames(memberId));
+        profile.setVibes(settingMapper.selectVibeNames(memberId));
+        profile.setAliasPublic(Boolean.TRUE.equals(setting.getAliasPublic()));
+        profile.setPhonePublic(Boolean.TRUE.equals(setting.getPhonePublic()));
+        profile.setNoteAutoSave(Boolean.TRUE.equals(setting.getNoteAutoSave()));
+        profile.setThemeColor(setting.getThemaColor());
+        return profile;
     }
 
-    /** 프로필 수정 화면: 닉네임 · 소개 */
+    /** 프로필 수정 화면: 요청에서 닉네임 · 소개만 읽는다 */
     @Transactional
-    public ProfileResponseDTO updateProfile(Long memberId, ProfileUpdateRequestDTO request) {
+    public ProfileDTO updateProfile(Long memberId, ProfileDTO request) {
         String alias = request.getAlias() == null ? "" : request.getAlias().trim();
         if (alias.length() < ALIAS_MIN || alias.length() > ALIAS_MAX) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "닉네임은 2~12자로 적어 주세요.");
@@ -95,9 +94,9 @@ public class ProfileService {
         return getProfile(memberId);
     }
 
-    /** 세부 설정 화면: 보낸 항목만 바꾼다 */
+    /** 세부 설정 화면: 요청에서 설정 항목만 읽고, 보낸 항목만 바꾼다 */
     @Transactional
-    public ProfileResponseDTO updateSettings(Long memberId, SettingUpdateRequestDTO request) {
+    public ProfileDTO updateSettings(Long memberId, ProfileDTO request) {
         getProfile(memberId); // 회원 확인 + 설정 행 보정
 
         MemberSettingDTO setting = new MemberSettingDTO();
@@ -131,7 +130,7 @@ public class ProfileService {
 
     /** 프로필 사진 올리기: 디스크 저장 → tbl_file · tbl_file_member → 이전 사진 삭제 */
     @Transactional
-    public ProfileResponseDTO uploadAvatar(Long memberId, MultipartFile file) {
+    public ProfileDTO uploadAvatar(Long memberId, MultipartFile file) {
         member(memberId);
         Optional<FileDTO> previous = fileMapper.selectMemberFile(memberId);
 
@@ -149,7 +148,7 @@ public class ProfileService {
 
     /** 프로필 사진 지우기 (닉네임 첫 글자로 돌아감) */
     @Transactional
-    public ProfileResponseDTO deleteAvatar(Long memberId) {
+    public ProfileDTO deleteAvatar(Long memberId) {
         member(memberId);
         fileMapper.selectMemberFile(memberId).ifPresent(this::removeMemberFile);
         return getProfile(memberId);

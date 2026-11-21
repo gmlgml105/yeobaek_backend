@@ -36,4 +36,6 @@ public class MemberAPIController {
 
         return ResponseEntity.ok(Map.of("message", "회원가입 성공"));
     }
+
+
 }
