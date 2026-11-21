@@ -6,13 +6,8 @@ import com.app.yeoback_backend.common.enumeration.CodePurpose;
 import com.app.yeoback_backend.common.enumeration.ContactMethod;
 import com.app.yeoback_backend.common.exception.ApiException;
 import com.app.yeoback_backend.common.exception.MemberLoginFailException;
+import com.app.yeoback_backend.dto.AuthDTO;
 import com.app.yeoback_backend.dto.MemberDTO;
-import com.app.yeoback_backend.dto.auth.CodeRequestDTO;
-import com.app.yeoback_backend.dto.auth.LoginRequestDTO;
-import com.app.yeoback_backend.dto.auth.LoginResponseDTO;
-import com.app.yeoback_backend.dto.auth.PasswordResetRequestDTO;
-import com.app.yeoback_backend.dto.auth.SentCodeDTO;
-import com.app.yeoback_backend.dto.auth.VerifyResultDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +32,7 @@ public class AuthService {
      *  2. AuthenticationManager → CustomUserDetailService.loadUserByUsername → BCrypt 비밀번호 비교
      *  3. 성공하면 access/refresh JWT 발급, 회원 정보와 함께 반환
      */
-    public LoginResponseDTO login(LoginRequestDTO request) {
+    public AuthDTO login(AuthDTO request) {
         if (request.getLoginId() == null || request.getMemberPassword() == null) {
             throw new MemberLoginFailException("아이디 또는 비밀번호가 비어 있음");
         }
@@ -52,7 +47,7 @@ public class AuthService {
 
         MemberDTO member = memberService.getMember(user.getLoginId());
         log.info("login success: id={}", member.getId());
-        return new LoginResponseDTO(accessToken, member);
+        return AuthDTO.login(accessToken, member);
     }
 
     /**
@@ -60,7 +55,7 @@ public class AuthService {
      *  - 소셜 로그인 콜백 화면이 토큰을 localStorage 에 담을 때 사용
      *  - 리프레시 토큰도 새로 발급해 유지 시간을 다시 시작한다
      */
-    public LoginResponseDTO refresh(HttpServletRequest request) {
+    public AuthDTO refresh(HttpServletRequest request) {
         String refreshToken = jwtTokenProvider.parseRefreshTokenFromCookie(request);
         if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "no_session", "로그인이 필요해요.");
@@ -71,7 +66,7 @@ public class AuthService {
 
         String accessToken = jwtTokenProvider.createAccessToken(loginId);
         jwtTokenProvider.createRefreshToken(loginId);
-        return new LoginResponseDTO(accessToken, member);
+        return AuthDTO.login(accessToken, member);
     }
 
     public void logout() {
@@ -79,7 +74,7 @@ public class AuthService {
     }
 
     /** 인증코드 발송: 가입이면 중복 계정 거절, 재설정이면 없는 계정 거절 */
-    public SentCodeDTO sendCode(CodeRequestDTO request) {
+    public AuthDTO sendCode(AuthDTO request) {
         CodePurpose purpose = required(request.getPurpose(), "purpose");
         ContactMethod method = required(request.getMethod(), "method");
         String contact = method.normalize(request.getContact());
@@ -97,23 +92,23 @@ public class AuthService {
         return verificationService.send(purpose, method, contact);
     }
 
-    public VerifyResultDTO verifyCode(CodeRequestDTO request) {
+    public AuthDTO verifyCode(AuthDTO request) {
         CodePurpose purpose = required(request.getPurpose(), "purpose");
         ContactMethod method = required(request.getMethod(), "method");
         return verificationService.verify(purpose, method.normalize(request.getContact()), request.getCode());
     }
 
     /** 비밀번호 재설정: reset 용도 인증을 마친 경우에만 */
-    public void resetPassword(PasswordResetRequestDTO request) {
+    public void resetPassword(AuthDTO request) {
         ContactMethod method = required(request.getMethod(), "method");
         String contact = method.normalize(request.getContact());
         if (!verificationService.isVerified(CodePurpose.RESET, contact)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "not_verified", "인증코드 확인을 먼저 진행해 주세요.");
         }
-        if (request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+        if (request.getMemberPassword() == null || request.getMemberPassword().isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid", "새 비밀번호를 입력해 주세요.");
         }
-        memberService.changePassword(contact, request.getNewPassword());
+        memberService.changePassword(contact, request.getMemberPassword());
         verificationService.consume(CodePurpose.RESET, contact);
     }
 

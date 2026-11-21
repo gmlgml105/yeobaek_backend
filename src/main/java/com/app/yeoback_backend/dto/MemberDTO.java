@@ -28,7 +28,7 @@ public class MemberDTO implements Serializable {
     private Status memberStatus;
     private boolean memberLoginVerified;
 
-    //
+    // 회원 권한
     private MemberRole memberRole;
 
     // 프로필사진

@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -83,7 +85,7 @@ public class MemberService {
     }
 
     //    활동 중인 회원 조회 (없으면 empty)
-    public java.util.Optional<MemberDTO> findActiveMember(String loginId) {
+    public Optional<MemberDTO> findActiveMember(String loginId) {
         return memberDAO.findMemberByLoginId(loginId);
     }
 
