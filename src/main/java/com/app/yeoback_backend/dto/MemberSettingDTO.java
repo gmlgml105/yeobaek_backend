@@ -1,5 +1,6 @@
 package com.app.yeoback_backend.dto;
 
+import com.app.yeoback_backend.common.enumeration.Visibility;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,7 +15,7 @@ import lombok.ToString;
 public class MemberSettingDTO {
     private Long id;
     private String themaColor;
-    private Boolean aliasPublic;
-    private Boolean phonePublic;
+    private Visibility nameVisibility;   // 실명 공개 범위
+    private Visibility phoneVisibility;  // 연락처 공개 범위
     private Boolean noteAutoSave;
 }

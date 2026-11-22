@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.app.yeoback_backend.mapper.MemberRelMapper">
+
+    <select id="selectBetween" resultType="MemberRelVO">
+        select id, rel_requester_id, rel_receiver_id, rel_status, created_datetime, updated_datetime
+        from tbl_member_rel
+        where (rel_requester_id = #{me} and rel_receiver_id = #{other})
+           or (rel_requester_id = #{other} and rel_receiver_id = #{me})
+    </select>
+
+    <insert id="insert">
+        insert into tbl_member_rel (rel_requester_id, rel_receiver_id)
+        values (#{requesterId}, #{receiverId})
+    </insert>
+
+    <update id="updateStatus">
+        update tbl_member_rel
+        set rel_status = #{status}, updated_datetime = now()
+        where id = #{id}
+    </update>
+
+    <delete id="delete">
+        delete from tbl_member_rel where id = #{id}
+    </delete>
+
+    <!--
+        목록 공통: 상대 회원(m)의 닉네임 · 사진. 활동 중인 회원만.
+        사진은 FileMapper.selectMemberFile 과 같이 가장 최근 것 (tbl_file_member.id = tbl_file.id)
+    -->
+    <sql id="otherMemberColumns">
+        m.id as member_id,
+        m.member_alias as alias,
+        (select '/api/files/' || max(fm.id) from tbl_file_member fm where fm.member_id = m.id) as avatar_url
+    </sql>
+
+    <select id="selectFriends" resultType="FriendDTO">
+        select <include refid="otherMemberColumns"/>,
+               to_char(r.updated_datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as since
+        from tbl_member_rel r
+                 join tbl_member m
+                      on m.id = case when r.rel_requester_id = #{me} then r.rel_receiver_id else r.rel_requester_id end
+        where (r.rel_requester_id = #{me} or r.rel_receiver_id = #{me})
+          and r.rel_status = 'done'
+          and m.member_status = 'ACTIVE'
+        order by m.member_alias
+    </select>
+
+    <select id="selectReceived" resultType="FriendDTO">
+        select <include refid="otherMemberColumns"/>,
+               to_char(r.created_datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as since
+        from tbl_member_rel r
+                 join tbl_member m on m.id = r.rel_requester_id
+        where r.rel_receiver_id = #{me}
+          and r.rel_status = 'pending'
+          and m.member_status = 'ACTIVE'
+        order by r.created_datetime desc
+    </select>
+
+    <select id="selectSent" resultType="FriendDTO">
+        select <include refid="otherMemberColumns"/>,
+               to_char(r.created_datetime, 'YYYY-MM-DD"T"HH24:MI:SS') as since
+        from tbl_member_rel r
+                 join tbl_member m on m.id = r.rel_receiver_id
+        where r.rel_requester_id = #{me}
+          and r.rel_status = 'pending'
+          and m.member_status = 'ACTIVE'
+        order by r.created_datetime desc
+    </select>
+
+    <select id="countReceived" resultType="int">
+        select count(*)
+        from tbl_member_rel r
+                 join tbl_member m on m.id = r.rel_requester_id
+        where r.rel_receiver_id = #{me}
+          and r.rel_status = 'pending'
+          and m.member_status = 'ACTIVE'
+    </select>
+
+    <!--
+        닉네임 검색: keyword 는 검색어 그대로, pattern 은 Service 가 \ % _ 를 이스케이프하고 앞뒤에 % 를 붙인 값
+        state 는 FriendState enum 이름 그대로 (MyBatis 기본 EnumTypeHandler)
+        정확히 같은 닉네임 → 짧은 닉네임 → 가나다 순
+    -->
+    <select id="searchByAlias" resultType="FriendDTO">
+        select <include refid="otherMemberColumns"/>,
+               case
+                   when r.id is null then 'NONE'
+                   when r.rel_status = 'done' then 'FRIEND'
+                   when r.rel_requester_id = #{me} then 'REQUESTED'
+                   else 'RECEIVED'
+               end as state
+        from tbl_member m
+                 left join tbl_member_rel r
+                           on (r.rel_requester_id = #{me} and r.rel_receiver_id = m.id)
+                               or (r.rel_requester_id = m.id and r.rel_receiver_id = #{me})
+        where m.id &lt;&gt; #{me}
+          and m.member_status = 'ACTIVE'
+          and m.member_alias ilike #{pattern}
+        order by (lower(m.member_alias) = lower(#{keyword})) desc,
+                 length(m.member_alias), m.member_alias
+        limit #{limit}
+    </select>
+</mapper>

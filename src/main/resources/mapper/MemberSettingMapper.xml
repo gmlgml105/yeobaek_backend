@@ -10,7 +10,7 @@
     </insert>
 
     <select id="selectByMemberId" resultType="MemberSettingDTO">
-        select id, thema_color, alias_public, phone_public, note_auto_save
+        select id, thema_color, name_visibility, phone_visibility, note_auto_save
         from tbl_member_setting
         where id = #{memberId}
     </select>
@@ -19,8 +19,8 @@
         update tbl_member_setting
         <set>
             <if test="themaColor != null">thema_color = #{themaColor},</if>
-            <if test="aliasPublic != null">alias_public = #{aliasPublic},</if>
-            <if test="phonePublic != null">phone_public = #{phonePublic},</if>
+            <if test="nameVisibility != null">name_visibility = #{nameVisibility},</if>
+            <if test="phoneVisibility != null">phone_visibility = #{phoneVisibility},</if>
             <if test="noteAutoSave != null">note_auto_save = #{noteAutoSave},</if>
             updated_datetime = now()
         </set>

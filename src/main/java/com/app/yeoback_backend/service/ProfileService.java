@@ -1,6 +1,8 @@
 package com.app.yeoback_backend.service;
 
 import com.app.yeoback_backend.common.exception.ApiException;
+import com.app.yeoback_backend.common.enumeration.Status;
+import com.app.yeoback_backend.common.enumeration.Visibility;
 import com.app.yeoback_backend.common.exception.MemberNotFoundException;
 import com.app.yeoback_backend.dto.FileDTO;
 import com.app.yeoback_backend.dto.MemberDTO;
@@ -9,6 +11,7 @@ import com.app.yeoback_backend.dto.ProfileDTO;
 import com.app.yeoback_backend.mapper.FileMapper;
 import com.app.yeoback_backend.mapper.MemberSettingMapper;
 import com.app.yeoback_backend.repository.MemberDAO;
+import com.app.yeoback_backend.repository.MemberRelDAO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -44,6 +47,7 @@ public class ProfileService {
     private final FileMapper fileMapper;
     private final FileStorageService fileStorageService;
     private final MemberDefaultsService memberDefaultsService;
+    private final MemberRelDAO memberRelDAO;
 
     @Transactional
     public ProfileDTO getProfile(Long memberId) {
@@ -71,11 +75,62 @@ public class ProfileService {
         profile.setBio(member.getMemberBio());
         profile.setPreferences(settingMapper.selectPreferenceNames(memberId));
         profile.setVibes(settingMapper.selectVibeNames(memberId));
-        profile.setAliasPublic(Boolean.TRUE.equals(setting.getAliasPublic()));
-        profile.setPhonePublic(Boolean.TRUE.equals(setting.getPhonePublic()));
+        profile.setNameVisibility(orPrivate(setting.getNameVisibility()));
+        profile.setPhoneVisibility(orPrivate(setting.getPhoneVisibility()));
         profile.setNoteAutoSave(Boolean.TRUE.equals(setting.getNoteAutoSave()));
         profile.setThemeColor(setting.getThemaColor());
         return profile;
+    }
+
+    /**
+     * GET /api/profile/{memberId}: 보는 사람(viewerId)이 본인이면 내 프로필, 아니면 공개용 회원 프로필
+     */
+    @Transactional
+    public ProfileDTO getProfile(Long viewerId, Long memberId) {
+        return viewerId.equals(memberId) ? getProfile(memberId) : getMemberProfile(viewerId, memberId);
+    }
+
+    /**
+     * 다른 회원이 보는 프로필 (조회만 하고 아무것도 저장하지 않는다)
+     *  - 없는 회원 · 활동 중이 아닌 회원(정지 · 탈퇴)은 404
+     *  - 실명 · 연락처는 보는 사람에게 공개된 경우에만 (공개, 또는 '친구만'이고 친구 사이)
+     *    공개되지 않은 항목은 값을 비우고 visibility 를 private 로 보낸다
+     *  - 이메일과 개인 설정 값은 보내지 않는다
+     *  - 설정 행이 없는 회원은 기본값(비공개)으로 본다
+     */
+    @Transactional(readOnly = true)
+    public ProfileDTO getMemberProfile(Long viewerId, Long memberId) {
+        MemberDTO member = memberDAO.findById(memberId)
+                .filter(m -> m.getMemberStatus() == Status.ACTIVE)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "not_found", "회원을 찾지 못했어요."));
+        MemberSettingDTO setting = settingMapper.selectByMemberId(memberId).orElseGet(MemberSettingDTO::new);
+        boolean friends = memberRelDAO.areFriends(viewerId, memberId);
+        Visibility name = visibleTo(setting.getNameVisibility(), friends);
+        Visibility phone = visibleTo(setting.getPhoneVisibility(), friends);
+
+        ProfileDTO profile = new ProfileDTO();
+        profile.setId(member.getId());
+        profile.setAlias(member.getMemberAlias());
+        profile.setBio(member.getMemberBio());
+        profile.setAvatarUrl(fileMapper.selectMemberFile(memberId).map(f -> "/api/files/" + f.getId()).orElse(null));
+        profile.setPreferences(settingMapper.selectPreferenceNames(memberId));
+        profile.setVibes(settingMapper.selectVibeNames(memberId));
+        profile.setNameVisibility(name);
+        profile.setPhoneVisibility(phone);
+        profile.setName(name == Visibility.PRIVATE ? null : member.getMemberName());
+        profile.setPhone(phone == Visibility.PRIVATE ? null : member.getMemberPhone());
+        return profile;
+    }
+
+    private static Visibility orPrivate(Visibility v) {
+        return v == null ? Visibility.PRIVATE : v;
+    }
+
+    /** 보는 사람에게 보이는 공개 범위: 보이면 원래 값(public · friends), 안 보이면 private */
+    private static Visibility visibleTo(Visibility v, boolean friends) {
+        Visibility scope = orPrivate(v);
+        if (scope == Visibility.PUBLIC || (scope == Visibility.FRIENDS && friends)) return scope;
+        return Visibility.PRIVATE;
     }
 
     /** 프로필 수정 화면: 요청에서 닉네임 · 소개만 읽는다 */
@@ -101,8 +156,8 @@ public class ProfileService {
 
         MemberSettingDTO setting = new MemberSettingDTO();
         setting.setId(memberId);
-        setting.setAliasPublic(request.getAliasPublic());
-        setting.setPhonePublic(request.getPhonePublic());
+        setting.setNameVisibility(request.getNameVisibility());
+        setting.setPhoneVisibility(request.getPhoneVisibility());
         setting.setNoteAutoSave(request.getNoteAutoSave());
         if (request.getThemeColor() != null) {
             String color = request.getThemeColor().trim().toLowerCase();
