@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/trip/**")
+@RequestMapping("/api/trip")
 @RequiredArgsConstructor
 @Slf4j
 public class TripAPIController {
@@ -25,7 +25,7 @@ public class TripAPIController {
     // ===================== 여행 =====================
 
     // 여행 만들기
-    @PostMapping("create")
+    @PostMapping("/create")
     @LogStatus
     public ResponseEntity<?> create(@RequestBody TripDTO tripDTO) {
         log.info("tripDTO {}", tripDTO);
@@ -35,7 +35,7 @@ public class TripAPIController {
     }
 
     // 여행 한 건 조회 (동행 · 일차 · 일정 포함)
-    @GetMapping("detail")
+    @GetMapping("/detail")
     @LogStatus
     public ResponseEntity<?> detail(@RequestParam Long id) {
         TripDTO trip = tripService.getTrip(id, getLoginMemberId());
@@ -44,7 +44,7 @@ public class TripAPIController {
     }
 
     // 내 여행 목록
-    @GetMapping("list")
+    @GetMapping("/list")
     @LogStatus
     public ResponseEntity<?> list() {
         List<TripDTO> trips = tripService.getMyTrips(getLoginMemberId());
@@ -53,7 +53,7 @@ public class TripAPIController {
     }
 
     // 여행 수정
-    @PutMapping("update")
+    @PutMapping("/update")
     @LogStatus
     public ResponseEntity<?> update(@RequestBody TripDTO tripDTO) {
         log.info("tripDTO {}", tripDTO);
@@ -63,7 +63,7 @@ public class TripAPIController {
     }
 
     // 여행 삭제
-    @DeleteMapping("delete")
+    @DeleteMapping("/delete")
     @LogStatus
     public ResponseEntity<?> delete(@RequestParam Long id) {
         tripService.deleteTrip(id, getLoginMemberId());

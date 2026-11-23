@@ -10,28 +10,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-@RequestMapping("/trip/**")
+@RequestMapping("/trip")
 @RequiredArgsConstructor
 @Slf4j
 public class TripController {
     private final TripService tripService;
 
     // 새 여행 만들기 페이지 이동 (Mobile 09)
-    @GetMapping("create")
+    @GetMapping("/create")
     public String goToCreatePage() {
         // TODO -> 경로 상의 필요함
         return "trip/create";
     }
 
     // 나의 일정(여행 목록) 페이지 이동 (Mobile 11)
-    @GetMapping("list")
+    @GetMapping("/list")
     public String goToListPage() {
         // TODO -> 경로 상의 필요함
         return "trip/list";
     }
 
     // 일정 추가 페이지 이동 (Mobile 10)
-    @GetMapping("schedule")
+    @GetMapping("/schedule")
     public String goToSchedulePage(@RequestParam Long tripId, Model model) {
         model.addAttribute("tripId", tripId);
         // TODO -> 경로 상의 필요함
@@ -39,7 +39,7 @@ public class TripController {
     }
 
     // 날짜별 일정 페이지 이동 (Mobile 12)
-    @GetMapping("day")
+    @GetMapping("/day")
     public String goToDayPage(@RequestParam Long tripId,
                               @RequestParam(required = false) Integer dayNumber,
                               Model model) {
