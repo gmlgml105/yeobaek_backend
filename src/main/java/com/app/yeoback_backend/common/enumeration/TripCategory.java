@@ -9,9 +9,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // 여행 카테고리 (DB: trip_category) : 국내 / 해외
-// DB enum 값이 대문자라서 value도 DB와 똑같이 대문자로 맞춘다
+// DB enum 값이 소문자라서 value도 DB와 똑같이 소문자로 맞춘다
 public enum TripCategory {
-    DOMESTIC("DOMESTIC"), OVERSEAS("OVERSEAS");
+    DOMESTIC("domestic"), OVERSEAS("overseas");
 
     private final String value;
 

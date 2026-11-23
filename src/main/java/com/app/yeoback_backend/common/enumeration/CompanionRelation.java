@@ -9,9 +9,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // 동행 관계 상태 (DB: companion_relation) : 대기 중 / 완료 / 거절
-// DB enum 값이 대문자라서 value도 DB와 똑같이 대문자로 맞춘다
+// DB enum 값이 소문자라서 value도 DB와 똑같이 소문자로 맞춘다
 public enum CompanionRelation {
-    PENDING("PENDING"), DONE("DONE"), REJECT("REJECT");
+    PENDING("pending"), DONE("done"), REJECT("reject");
 
     private final String value;
 

@@ -9,9 +9,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // 여행 상태 (DB: trip_status) : 작성 중 / 임시 저장 / 완료
-// DB enum 값이 대문자라서 value도 DB와 똑같이 대문자로 맞춘다
+// DB enum 값이 소문자라서 value도 DB와 똑같이 소문자로 맞춘다
 public enum TripStatus {
-    WRITE("WRITE"), SAVE("SAVE"), FINISH("FINISH");
+    WRITE("write"), SAVE("save"), FINISH("finish");
 
     private final String value;
 
