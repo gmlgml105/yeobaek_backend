@@ -3,8 +3,7 @@ package com.app.yeoback_backend.service;
 import com.app.yeoback_backend.common.enumeration.CodePurpose;
 import com.app.yeoback_backend.common.enumeration.ContactMethod;
 import com.app.yeoback_backend.common.exception.ApiException;
-import com.app.yeoback_backend.dto.auth.SentCodeDTO;
-import com.app.yeoback_backend.dto.auth.VerifyResultDTO;
+import com.app.yeoback_backend.dto.AuthDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,7 +54,7 @@ public class VerificationService {
     }
 
     /** contact 는 이미 normalize 된 값 */
-    public SentCodeDTO send(CodePurpose purpose, ContactMethod method, String contact) {
+    public AuthDTO send(CodePurpose purpose, ContactMethod method, String contact) {
         String key = key(purpose, contact);
         long now = System.currentTimeMillis();
 
@@ -80,26 +79,26 @@ public class VerificationService {
         pending.put(key, next);
         verified.remove(key);
 
-        return new SentCodeDTO(next.expiresAt, next.sentAt + RESEND_COOLDOWN_MS, exposeCode ? next.code : null);
+        return AuthDTO.sentCode(next.expiresAt, next.sentAt + RESEND_COOLDOWN_MS, exposeCode ? next.code : null);
     }
 
-    public VerifyResultDTO verify(CodePurpose purpose, String contact, String input) {
+    public AuthDTO verify(CodePurpose purpose, String contact, String input) {
         String key = key(purpose, contact);
         Pending p = pending.get(key);
-        if (p == null) return VerifyResultDTO.fail("no_code");
-        if (System.currentTimeMillis() > p.expiresAt) return VerifyResultDTO.fail("expired");
+        if (p == null) return AuthDTO.verifyFail("no_code");
+        if (System.currentTimeMillis() > p.expiresAt) return AuthDTO.verifyFail("expired");
 
         synchronized (p) {
-            if (p.attempts >= MAX_ATTEMPTS) return VerifyResultDTO.fail("too_many");
+            if (p.attempts >= MAX_ATTEMPTS) return AuthDTO.verifyFail("too_many");
             if (input == null || !p.code.equals(input.trim().toUpperCase())) {
                 p.attempts += 1;
                 int left = MAX_ATTEMPTS - p.attempts;
-                return left <= 0 ? VerifyResultDTO.fail("too_many") : VerifyResultDTO.mismatch(left);
+                return left <= 0 ? AuthDTO.verifyFail("too_many") : AuthDTO.mismatch(left);
             }
         }
         pending.remove(key);
         verified.put(key, System.currentTimeMillis() + VERIFIED_TTL_MS);
-        return VerifyResultDTO.success();
+        return AuthDTO.verified();
     }
 
     /** 인증을 마쳤는지 확인 (아직 소모하지 않음) */

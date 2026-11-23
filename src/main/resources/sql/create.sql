@@ -5,6 +5,7 @@ create type status as enum ('ACTIVE', 'SUSPENDED', 'WITHDRAWN'); -- 회원 상�
 create type member_role as enum ('admin', 'member'); -- 회원 권한 (관리자, 일반 회원)
 create type oauth_provider as enum ('kakao', 'naver', 'google');
 create type rel_status as enum ('pending', 'done'); -- 친구 관계 상태 (대기 중, 완료)
+create type visibility as enum ('private', 'friends', 'public'); -- 공개 범위 (비공개, 친구만, 공개)
 create type companion_relation as enum ('pending', 'done', 'reject'); -- 동행 관계 상태 (대기 중, 완료, 거절)
 create type together_purpose as enum ('meal', 'spot'); -- 모임 목적 (식사, 장소/관광)
 create type together_area as enum ('near', 'other'); -- 모임 지역 구분 (근처, 기타)
@@ -113,8 +114,8 @@ create table tbl_auth (
 create table tbl_member_setting (
                                     id bigint not null primary key,
                                     thema_color varchar(30) default 'sky',      -- 팔레트 id(sky·aqua·blossom·lavender·mint) 또는 직접 고른 #rrggbb
-                                    alias_public boolean default true,
-                                    phone_public boolean default false,
+                                    name_visibility visibility default 'private',   -- 실명 공개 범위 (회원 프로필에서 실명을 보여 줄 대상)
+                                    phone_visibility visibility default 'private',  -- 연락처 공개 범위
                                     note_auto_save boolean default true,
                                     created_datetime timestamp default now(),
                                     updated_datetime timestamp default now(),
@@ -149,15 +150,20 @@ create table tbl_member_vibe (
 -- 친구 신청 목록
 create table tbl_member_rel (
                                 id bigint generated always as identity primary key,
-                                rel_requester_id bigint not null,
-                                rel_receiver_id bigint not null,
-                                rel_status rel_status not null default 'pending',
+                                rel_requester_id bigint not null,                  -- 친구 신청한 회원
+                                rel_receiver_id bigint not null,                   -- 친구 신청 받은 회원
+                                rel_status rel_status not null default 'pending',  -- pending: 신청 중, done: 친구
                                 created_datetime timestamp default now(),
+                                updated_datetime timestamp default now(),          -- 수락한 시각
                                 constraint fk_rel_requester foreign key (rel_requester_id)
-                                    references tbl_member(id),
+                                    references tbl_member(id) on delete cascade,
                                 constraint fk_rel_receiver foreign key (rel_receiver_id)
-                                    references tbl_member(id)
+                                    references tbl_member(id) on delete cascade,
+                                constraint ck_rel_not_self check (rel_requester_id <> rel_receiver_id)
 );
+-- 두 회원 사이의 관계는 방향과 상관없이 하나만 (A→B 가 있으면 B→A 도 만들 수 없음, 동시 신청 대비)
+create unique index uq_member_rel_pair
+    on tbl_member_rel (least(rel_requester_id, rel_receiver_id), greatest(rel_requester_id, rel_receiver_id));
 
 
 --------------------------------------------------
@@ -396,10 +402,10 @@ create table tbl_file_note (
 
 -- 여행 취향
 insert into tbl_preference (preference_name) values
-    ('힐링'), ('풍경'), ('식도락'), ('디저트'), ('물멍'), ('로컬'), ('카페'), ('쇼핑'), ('휴양'), ('캠핑'), ('축제'), ('가성비'),
-    ('어드벤처'), ('팝업'), ('공연'), ('호캉스'), ('자연'), ('사진'), ('기념품'), ('숙소'), ('가족'), ('커플'), ('친구'), ('나홀로');
+                                                 ('힐링'), ('풍경'), ('식도락'), ('디저트'), ('물멍'), ('로컬'), ('카페'), ('쇼핑'), ('휴양'), ('캠핑'), ('축제'), ('가성비'),
+                                                 ('어드벤처'), ('팝업'), ('공연'), ('호캉스'), ('자연'), ('사진'), ('기념품'), ('숙소'), ('가족'), ('커플'), ('친구'), ('나홀로');
 
 -- 여행 키워드
 insert into tbl_vibe (vibe_name) values
-    ('평온한'), ('계획적인'), ('평화로운'), ('활발한'), ('여유로운'), ('재밌는'), ('무계획의'), ('회복되는'), ('조용한'),
-    ('나즈막한'), ('체계적인'), ('가벼운'), ('로컬적인'), ('활기찬'), ('체험하는');
+                                     ('평온한'), ('계획적인'), ('평화로운'), ('활발한'), ('여유로운'), ('재밌는'), ('무계획의'), ('회복되는'), ('조용한'),
+                                     ('나즈막한'), ('체계적인'), ('가벼운'), ('로컬적인'), ('활기찬'), ('체험하는');

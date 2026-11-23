@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
-public class FileController {
+public class FileAPIController {
     private final FileMapper fileMapper;
     private final FileStorageService fileStorageService;
 
