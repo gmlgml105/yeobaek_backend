@@ -41,6 +41,7 @@ create table tbl_member (
 create table tbl_place (
                            id bigint generated always as identity primary key,
                            google_place_id varchar(255) unique,
+                           kakao_place_id varchar(255) unique,
                            place_name varchar(255) not null,
                            place_address varchar(255) not null,
                            place_lat decimal not null,
@@ -409,3 +410,14 @@ insert into tbl_preference (preference_name) values
 insert into tbl_vibe (vibe_name) values
                                      ('평온한'), ('계획적인'), ('평화로운'), ('활발한'), ('여유로운'), ('재밌는'), ('무계획의'), ('회복되는'), ('조용한'),
                                      ('나즈막한'), ('체계적인'), ('가벼운'), ('로컬적인'), ('활기찬'), ('체험하는');
+
+insert into tbl_destination (destination_name, destination_type) values
+                                                                     ('대한민국','country'),('일본','country'),('베트남','country');
+-- 도시는 상위 나라 id를 참조: parent_id를 name으로 찾아 넣기
+insert into tbl_destination (destination_parent_id, destination_name, destination_type)
+select p.id, c.city_name, 'city'::destination_type
+from tbl_destination p
+         join (values ('대한민국', '서울'), ('대한민국', '부산'), ('대한민국', '제주'),
+                      ('일본', '도쿄'), ('일본', '오사카'),
+                      ('베트남', '다낭')) as c(country_name, city_name)
+              on p.destination_name = c.country_name and p.destination_type = 'country';
